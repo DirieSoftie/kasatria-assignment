@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kasatria Software Developer Internship – Assignment
 
-## Getting Started
+An interactive 3D visualization of 200 people from a Google Sheet, rendered in the style of the [three.js CSS3D periodic table](https://threejs.org/examples/#css3d_periodictable) demo. Google-authenticated, deployed on Vercel.
 
-First, run the development server:
+**Live demo:** https://kasatria.rayhanc.com
+
+## Features
+
+- **Google sign-in** via a Google Cloud OAuth client, gating the entire app through Clerk middleware
+- **200 people** loaded from a published Google Sheet CSV, parsed server-side with a 1-hour ISR cache
+- **Four layouts** with animated transitions:
+  - Table (20 columns × 10 rows)
+  - Sphere
+  - Double Helix (two strands offset by π)
+  - Grid (5 × 4 × 10)
+- **Net-worth-based tile colors:** red under $100K, orange over $100K, green over $200K
+- Trackball camera controls, hover highlight, smooth tweened transitions
+
+## Tech stack
+
+- **Next.js 15** (App Router, TypeScript, Turbopack)
+- **React 19**
+- **three.js** (`CSS3DRenderer` + `TrackballControls`)
+- **@tweenjs/tween.js** for layout transitions
+- **Clerk** for authentication (backed by custom Google OAuth credentials)
+- **csv-parse** for server-side sheet parsing
+- **Tailwind CSS 4**
+- Deployed on **Vercel**
+
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Requires a `.env.local` with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+GOOGLE_SHEET_CSV_URL=...
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
+CLERK_SECRET_KEY=...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+```
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+  page.tsx                    Server component, fetches people, renders loader
+  PeriodicTableLoader.tsx     Client bridge for dynamic({ ssr: false })
+  PeriodicTable.tsx           Client component, three.js scene in useEffect
+  layout.tsx                  Root layout, wraps app in ClerkProvider
+  globals.css                 Tailwind + tile styles
+  sign-in/[[...sign-in]]/     Clerk sign-in page
+lib/
+  people.ts                   Server-only CSV fetcher/parser
+middleware.ts                 Clerk auth middleware
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Implementation notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Three.js work is confined to a single `useEffect` with full cleanup (RAF cancellation, listener removal, `TrackballControls` disposal, scene teardown) so React 19 StrictMode's dev double-mount doesn't leave orphaned renderers.
+- Data fetching runs server-side, which keeps `GOOGLE_SHEET_CSV_URL` out of the client bundle and lets the CSV be parsed once per hour rather than on every request.
+- The `PeriodicTableLoader` bridge exists because Next 15 requires `dynamic({ ssr: false })` to be called from a client component, while `page.tsx` needs to stay a server component to fetch data.
+- Tile background is set inline (with random alpha), but border and glow use a CSS custom property (`--tile-color`) so `:hover` can override without losing to inline-style specificity.
