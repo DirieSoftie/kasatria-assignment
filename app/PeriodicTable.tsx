@@ -14,7 +14,7 @@ type Layout = "table" | "sphere" | "helix" | "grid" | "tetra";
 
 function tileColor(netWorth: number): string {
   if (netWorth > 200_000) return "40,180,80"; // green
-  if (netWorth > 100_000) return "230,140,30"; // orange
+  if (netWorth >= 100_000) return "230,140,30"; // orange
   return "210,50,50"; // red
 }
 
