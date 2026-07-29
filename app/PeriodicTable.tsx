@@ -10,7 +10,7 @@ import {
 import { Easing, Group, Tween } from "@tweenjs/tween.js";
 import type { Person } from "@/lib/people";
 
-type Layout = "table" | "sphere" | "helix" | "grid";
+type Layout = "table" | "sphere" | "helix" | "grid" | "tetra";
 
 function tileColor(netWorth: number): string {
   if (netWorth > 200_000) return "40,180,80"; // green
@@ -42,6 +42,7 @@ export default function PeriodicTable({ people }: { people: Person[] }) {
       sphere: [],
       helix: [],
       grid: [],
+      tetra: [],
     };
 
     for (let i = 0; i < people.length; i++) {
@@ -132,6 +133,55 @@ export default function PeriodicTable({ people }: { people: Person[] }) {
       gridTarget.position.y = -(Math.floor(i / 5) % 4) * 400 + 600;
       gridTarget.position.z = Math.floor(i / 20) * 1000 - 4500;
       targets.grid.push(gridTarget);
+    }
+
+    const TETRA_SCALE = 850;
+    const tetraV = [
+      new THREE.Vector3(1, 1, 1).multiplyScalar(TETRA_SCALE),
+      new THREE.Vector3(1, -1, -1).multiplyScalar(TETRA_SCALE),
+      new THREE.Vector3(-1, 1, -1).multiplyScalar(TETRA_SCALE),
+      new THREE.Vector3(-1, -1, 1).multiplyScalar(TETRA_SCALE),
+    ];
+    const tetraFaces = [
+      { A: tetraV[1], B: tetraV[2], C: tetraV[3], N: new THREE.Vector3(-1, -1, -1).normalize() },
+      { A: tetraV[0], B: tetraV[3], C: tetraV[2], N: new THREE.Vector3(-1, 1, 1).normalize() },
+      { A: tetraV[0], B: tetraV[1], C: tetraV[3], N: new THREE.Vector3(1, -1, 1).normalize() },
+      { A: tetraV[0], B: tetraV[2], C: tetraV[1], N: new THREE.Vector3(1, 1, -1).normalize() },
+    ];
+    const totalTetra = objects.length;
+    const TETRA_SHRINK = 0.15;
+    for (let f = 0; f < 4; f++) {
+      const faceStart = Math.floor((f * totalTetra) / 4);
+      const faceEnd = Math.floor(((f + 1) * totalTetra) / 4);
+      const count = faceEnd - faceStart;
+      let rows = 1;
+      while ((rows * (rows + 1)) / 2 < count) rows++;
+      const { A, B, C, N } = tetraFaces[f];
+      const denom = 3 * rows;
+      for (let idx = 0; idx < count; idx++) {
+        let r = 0;
+        let remaining = idx;
+        while (remaining > r) {
+          remaining -= r + 1;
+          r++;
+        }
+        const j = remaining;
+        const alpha = (3 * (rows - r) - 2) / denom;
+        const beta = (3 * j + 1) / denom;
+        const gamma = (3 * (r - j) + 1) / denom;
+        const a = (1 - TETRA_SHRINK) * alpha + TETRA_SHRINK / 3;
+        const b = (1 - TETRA_SHRINK) * beta + TETRA_SHRINK / 3;
+        const c = (1 - TETRA_SHRINK) * gamma + TETRA_SHRINK / 3;
+        const tetraTarget = new THREE.Object3D();
+        tetraTarget.position.set(
+          a * A.x + b * B.x + c * C.x,
+          a * A.y + b * B.y + c * C.y,
+          a * A.z + b * B.z + c * C.z,
+        );
+        const lookAtPoint = tetraTarget.position.clone().addScaledVector(N, 1000);
+        tetraTarget.lookAt(lookAtPoint);
+        targets.tetra.push(tetraTarget);
+      }
     }
 
     const renderer = new CSS3DRenderer();
@@ -226,6 +276,9 @@ export default function PeriodicTable({ people }: { people: Person[] }) {
         </button>
         <button type="button" onClick={() => transformRef.current?.("grid")}>
           GRID
+        </button>
+        <button type="button" onClick={() => transformRef.current?.("tetra")}>
+          TETRAHEDRON
         </button>
       </div>
     </>
