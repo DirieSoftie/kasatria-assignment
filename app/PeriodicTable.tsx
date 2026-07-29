@@ -119,8 +119,8 @@ export default function PeriodicTable({ people }: { people: Person[] }) {
       const helixTarget = new THREE.Object3D();
       helixTarget.position.setFromCylindricalCoords(
         900,
-        k * 0.35 + strand * Math.PI + Math.PI,
-        -k * 16 + 800,
+        k * 0.30 + strand * Math.PI + Math.PI,
+        -k * 20 + 990,
       );
       vector.x = helixTarget.position.x * 2;
       vector.y = helixTarget.position.y;
